@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
   },
   orgType: {
     type: String,
-    enum: ["company", "startup", "institution", "individual"],
+    enum: ["Company", "Startup", "Institution", "Individual"],
     required: [true, "Please provide organization type"],
   },
   authSignatory: {

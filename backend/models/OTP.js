@@ -3,19 +3,25 @@ const mongoose = require('mongoose');
 const otpSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
+    required: true
   },
   otp: {
     type: String,
-    required: true,
+    required: true
+  },
+  resendCount: {
+    type: Number,
+    default: 0
+  },
+  lastResendTime: {
+    type: Date,
+    default: Date.now
   },
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: 300, //expires in 5 minutes
-  },
+    expires: 600 // Document expires in 10 minutes
+  }
 });
 
-const OTP = mongoose.model('OTP', otpSchema);
-
-module.exports = OTP;
+module.exports = mongoose.model('OTP', otpSchema);
