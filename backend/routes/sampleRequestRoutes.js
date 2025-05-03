@@ -29,6 +29,7 @@ router.use(authMiddleware.protect);
 
 router.post('/', upload.single('sampleImage'), sampleRequestController.createRequest);
 router.get('/my-requests', sampleRequestController.getUserRequests);
+router.get('/:id', authMiddleware.protect, sampleRequestController.getSampleRequest); // Add this route
 
 
 router.use(authMiddleware.authorize('admin', 'PI'));

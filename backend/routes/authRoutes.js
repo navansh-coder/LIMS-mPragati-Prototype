@@ -1,20 +1,27 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/authController');
-const otpController = require('../controllers/otpController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const {
+  register,
+  login,
+  verifyOTP,
+  resendOTP,
+  getMe,
+  forgotPassword,
+  verifyResetOTP,
+  resetPassword,
+} = require("../controllers/authController");
+const { protect } = require("../middlewares/authMiddleware");
 
-// Authentication routes
-router.post('/register', authController.register);
-router.post('/verify-otp', authController.verifyOTP);
-router.post('/resend-otp', authController.resendOTP);
-router.post('/login', authController.login);
+// Existing routes
+router.post("/register", register);
+router.post("/login", login);
+router.post("/verify-otp", verifyOTP);
+router.post("/resend-otp", resendOTP);
+router.get("/me", protect, getMe);
 
-// OTP routes
-router.post('/validate-otp', otpController.validateOTP);
-
-// Protected routes
-router.use(authMiddleware.protect);
-router.get('/me', authController.getMe);
+// New password reset routes
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-reset-otp", verifyResetOTP);
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

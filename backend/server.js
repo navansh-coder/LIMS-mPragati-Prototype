@@ -16,6 +16,8 @@ app.use(express.json());
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 //routes fr Sample request
 app.use('/api/requests', require('./routes/sampleRequestRoutes'));
+//routes for admin
+app.use('/api/v1/admin', require('./routes/adminRoutes'));
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

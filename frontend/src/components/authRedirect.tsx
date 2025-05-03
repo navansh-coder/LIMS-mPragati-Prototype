@@ -1,20 +1,25 @@
-import React, { ReactElement } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PropTypes from 'prop-types';
 
-type AuthRedirectProps = {
-  children: ReactElement;
-};
-
-// This component redirects authenticated users away from auth pages (login/register)
-const AuthRedirect = ({ children }: AuthRedirectProps) => {
-  const { isAuthenticated } = useAuth();
+// This component redirects authenticated users away from auth pages
+const AuthRedirect = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuth();
   
   if (isAuthenticated) {
+    // Redirect admin users to admin dashboard, others to user dashboard
+    if (user?.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
   
-  return children;
+  return <>{children}</>;
+};
+
+AuthRedirect.propTypes = {
+  children: PropTypes.element.isRequired
 };
 
 export default AuthRedirect;

@@ -43,6 +43,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  userType: {
+    type: String,
+    enum: ["internal", "external"],
+    default: "external",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -57,16 +62,34 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["user", "PI", "admin"],
+    enum: ["user", "employee", "PI", "admin"],
     default: "user",
   },
+  resetPasswordOTP: String,
+  resetPasswordExpire: Date
 });
 
-//encryption
+// Pre-save middleware to determine userType and role based on email domain
 userSchema.pre("save", async function (next) {
   try {
-    if (!this.isModified("password")) return next();
-    this.password = await bcrypt.hash(this.password, 12);
+    // Handle password encryption
+    if (this.isModified("password")) {
+      this.password = await bcrypt.hash(this.password, 12);
+    }
+    
+    // Set userType and role based on email domain if this is a new user
+    if (this.isNew) {
+      const emailDomain = this.email.split('@')[1];
+      
+      if (emailDomain === "mpragati.in") {
+        this.userType = "internal";
+        this.role = "employee";
+      } else {
+        this.userType = "external";
+        this.role = "user";
+      }
+    }
+    
     next();
   } catch (error) {
     next(error);

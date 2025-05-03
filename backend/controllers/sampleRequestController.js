@@ -139,3 +139,38 @@ exports.updateRequestStatus = async (req, res) => {
     });
   }
 };
+//get the sample request by id
+exports.getSampleRequest = async (req, res) => {
+  try {
+    const sampleRequest = await SampleRequest.findById(req.params.id)
+      .populate('userId', 'userName email orgName orgType contactNumber');
+
+    if (!sampleRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sample request not found'
+      });
+    }
+
+    // Check if the user has permission to view this request
+    // If user is not admin or PI, they can only see their own requests
+    if (req.user.role !== 'admin' && req.user.role !== 'PI') {
+      if (sampleRequest.userId._id.toString() !== req.user.id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to access this request'
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: sampleRequest
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

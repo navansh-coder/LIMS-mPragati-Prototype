@@ -126,7 +126,7 @@ const SampleRequest = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        "http://localhost:5000/api/sample-requests", 
+        "http://localhost:5000/api/requests", 
         requestData, 
         {
           headers: {

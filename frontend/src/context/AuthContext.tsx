@@ -9,11 +9,14 @@ interface User {
   orgType?: string;
   contactNumber?: string;
   authSignatory?: string;
+  role: string; 
+  userType: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  // user_role: string | null; 
   register: (formData: RegisterData) => Promise<{ message: string; success: boolean }>;
   verifyOTP: (email: string, otp: string) => Promise<{ token: string; user: User }>;
   login: (email: string, password: string) => Promise<{ token: string; user: User }>;
@@ -50,9 +53,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get<{ user: User }>('http://localhost:5000/api/v1/auth/me');
-      setUser(response.data.user);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const response = await axios.get('http://localhost:5000/api/v1/auth/me');
+      setUser(response.data.data.user);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      localStorage.setItem('token', token || '');
+      if(user) {
+        localStorage.setItem('isAuthenticated', 'true');
+      }
+      else {
+        localStorage.setItem('isAuthenticated', 'false');
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
       logout();
@@ -71,8 +81,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const verifyOTP = async (email: string, otp: string) => {
     try {
-      const response = await axios.post<{ token: string; user: User }>('http://localhost:5000/api/v1/auth/verify-otp', { email, otp });
-      const { token: newToken, user: userData } = response.data;
+      const response = await axios.post('http://localhost:5000/api/v1/auth/verify-otp', { email, otp });
+      const newToken = response.data.token;
+      const userData = response.data.data.user;
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(newToken);
@@ -86,8 +97,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post<{ token: string; user: User }>('http://localhost:5000/api/v1/auth/login', { email, password });
-      const { token: newToken, user: userData } = response.data;
+      const response = await axios.post('http://localhost:5000/api/v1/auth/login', { email, password });
+      const newToken = response.data.token;
+      const userData = response.data.data.user;
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(newToken);
@@ -111,6 +123,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     register,
+    user_role: user ? user.role : null,
     verifyOTP,
     login,
     logout,

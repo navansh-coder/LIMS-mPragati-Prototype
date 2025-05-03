@@ -11,7 +11,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/" replace />;
   }
   
-  return children;
+  return <>{children}</>;
 };
 
 
