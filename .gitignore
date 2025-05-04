@@ -1,2 +1,3 @@
 /public/uploads
 /backend/node_modules
+/backend/.env

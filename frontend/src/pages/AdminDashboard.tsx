@@ -77,6 +77,7 @@ const AdminDashboard = () => {
   // Reports tab state
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [showCreateReportForm, setShowCreateReportForm] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
   
   // Messages
   const [error, setError] = useState("");
@@ -284,8 +285,17 @@ const AdminDashboard = () => {
     return <Loader fullScreen={true} />;
   }
 
-  function handleCreateReport(request: SampleRequest): void {
-    throw new Error("Function not implemented.");
+  function handleCreateReport(request) {
+    // If the request already has a report, you might want to view it instead
+    if (request.reportId) {
+      // For example, open the report detail modal or navigate to the report page
+      // navigate(`/report/${request.reportId}`);
+      alert("Report already exists for this request.");
+      return;
+    }
+    // Show the CreateReportForm modal, passing the requestId
+    setShowCreateReportForm(true);
+    setSelectedRequestId(request._id); // Make sure you have this state
   }
 
   return (
@@ -727,11 +737,12 @@ const AdminDashboard = () => {
         {showCreateReportForm && (
           <CreateReportForm
             onReportCreated={() => {
-              // Refresh the data when a new report is created
               fetchUsers();
               fetchRequests();
+              setShowCreateReportForm(false);
             }}
             onClose={() => setShowCreateReportForm(false)}
+            requestId={selectedRequestId}
           />
         )}
       </div>
