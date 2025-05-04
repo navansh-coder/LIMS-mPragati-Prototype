@@ -4,6 +4,7 @@
 
 This project is a comprehensive Laboratory Information Management System for mPragati that helps manage sample testing requests, user authentication, and laboratory workflows.
 
+**[➡️ Skip to Using the Application](#using-the-application)**
 ## Project Overview
 
 The LIMS-mPragati system consists of:
@@ -101,3 +102,19 @@ npm run dev
 4. After registration, you'll receive an OTP (One-Time Password) via email
 5. Enter the OTP to verify your account
 6. Once verified, you can log in and access the dashboard
+
+## Using the Application
+
+1. Open your browser and navigate to: [http://localhost:5173](http://localhost:5173)
+2. You'll see the [Login Page](frontend/src/pages/Login.tsx)
+3. New users can [Register](frontend/src/pages/Register.tsx) by clicking the "Register" link
+4. After registration, you'll receive an OTP (One-Time Password) via email and be redirected to the [OTP Verification Page](frontend/src/pages/verifyotp.tsx)
+5. Enter the OTP to verify your account
+6. Once verified, you can log in and access the [User Dashboard](frontend/src/pages/UserDashboard.tsx)
+7. From the dashboard, you can:
+   - Submit a [Sample Request](frontend/src/pages/SampleRequest.tsx)
+   - View [Sample Request Details](frontend/src/pages/SampleRequestDetails.tsx)
+   - View and manage [Reports](frontend/src/pages/ReportDetail.tsx)
+   - If you are an admin, access the [Admin Dashboard](frontend/src/pages/AdminDashboard.tsx)
+   - If you are a PI/Employee, create reports via [Create Report](frontend/src/pages/CreateReport.tsx)
+8. Navigation is available via the [Navbar](frontend/src/components/Navbar.tsx)
