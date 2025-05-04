@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Loader from "../components/loader";
+import ReportsList from "../components/ReportList";
+import ReportDetail from "../pages/ReportDetail";
 
 interface SampleRequest {
   _id: string;
@@ -19,7 +21,8 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<"profile" | "requests">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "requests" | "reports">("profile");
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
   
   // Requests state
   const [requests, setRequests] = useState<SampleRequest[]>([]);
@@ -62,7 +65,7 @@ const UserDashboard = () => {
     : requests;
 
   // Handle tab change
-  const handleTabChange = (tab: "profile" | "requests") => {
+  const handleTabChange = (tab: "profile" | "requests" | "reports") => {
     setActiveTab(tab);
     setError("");
   };
@@ -107,6 +110,16 @@ const UserDashboard = () => {
             onClick={() => handleTabChange("requests")}
           >
             My Requests
+          </button>
+          <button
+            className={`py-2 px-6 font-medium ${
+              activeTab === "reports"
+                ? "text-purple-400 border-b-2 border-purple-400"
+                : "text-gray-400 hover:text-gray-300"
+            }`}
+            onClick={() => handleTabChange("reports")}
+          >
+            My Reports
           </button>
         </div>
 
@@ -290,6 +303,30 @@ const UserDashboard = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === "reports" && (
+          <div className="space-y-6">
+            <ReportsList 
+              userOnly={true}
+              onSelectReport={(report) => setSelectedReport(report._id)}
+            />
+          </div>
+        )}
+
+        {/* Report Detail Modal */}
+        {selectedReport && (
+          <ReportDetail
+            reportId={selectedReport}
+            onClose={() => setSelectedReport(null)}
+            onStatusChange={() => {
+              // Refresh the data when necessary
+              if (activeTab === "requests") {
+                fetchUserRequests();
+              }
+            }}
+          />
         )}
       </div>
     </div>

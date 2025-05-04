@@ -10,6 +10,9 @@ connectDB();
 const app = express();
 app.use(cors());
 app.use(express.static(path.join(__dirname, '/public')));
+app.use('/reports/pdf', express.static(path.join(__dirname, 'public/reports/pdf')));
+// Make sure to serve the reports directory
+app.use('/reports/pdf', express.static(path.join(__dirname, 'public/reports/pdf')));
 // Body parser
 app.use(express.json());
 //helper function to mount routers 
@@ -18,6 +21,8 @@ app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/requests', require('./routes/sampleRequestRoutes'));
 //routes for admin
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
+//routes for report
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import Loader from "../components/loader";
+import { useNavigate, Link } from "react-router-dom";
+import ReportsList from "../components/ReportList";
+import ReportDetail from "./ReportDetail";
+import CreateReportForm from "../components/CreateReportForm";
 
 // User management tab types
 interface User {
@@ -10,38 +14,41 @@ interface User {
   email: string;
   orgName: string;
   orgType: string;
-  contactNumber: string;
+  createdAt: string;
   role: "user" | "employee" | "PI" | "admin";
   userType: "internal" | "external";
-  isVerified: boolean;
 }
 
 // Request management tab types
 interface SampleRequest {
   _id: string;
   requestId: string;
-  userId: string | User;
-  orgId: string;
-  orgName: string;
   sampleType: string;
-  sampleDescription: string;
-  characterizationType: string[];
-  sampleImage?: string;
   numberOfSamples: number;
-  icmrProject: {
-    isFunded: boolean;
-    projectNumber: string;
-  };
+  characterizationType: string[];
+  userId: string | User;
   status: "Submitted" | "In-Review" | "Approved" | "Rejected" | "In-Progress" | "Completed";
   createdAt: string;
+  reportId?: string; // Reference to associated report if exists
+}
+
+// Add interface for Report
+interface Report {
+  _id: string;
+  title: string;
+  requestId: string | SampleRequest;
+  reportData: string;
+  createdAt: string;
+  updatedAt: string;
+  status: "Draft" | "Published";
 }
 
 const AdminDashboard = () => {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
-
+  
   // Tab state
-  const [activeTab, setActiveTab] = useState<"users" | "requests">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "requests" | "reports">("users");
   
   // Users tab state
   const [users, setUsers] = useState<User[]>([]);
@@ -49,7 +56,7 @@ const AdminDashboard = () => {
   const [userFilters, setUserFilters] = useState({
     userType: "",
     orgName: "",
-    orgType: "",
+    orgType: ""
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -61,26 +68,82 @@ const AdminDashboard = () => {
   const [requestFilters, setRequestFilters] = useState({
     status: "",
     orgName: "",
-    orgType: "",
+    orgType: ""
   });
   const [selectedRequest, setSelectedRequest] = useState<SampleRequest | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [newRequestStatus, setNewRequestStatus] = useState<"Submitted" | "In-Review" | "Approved" | "Rejected" | "In-Progress" | "Completed">("Submitted");
   
-  // Alerts
+  // Reports tab state
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [showCreateReportForm, setShowCreateReportForm] = useState(false);
+  
+  // Messages
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  // Fetch data on component mount
+  
   useEffect(() => {
-    if (!token) return;
-    
-    fetchUsers();
-    fetchRequests();
-  }, [token]);
-
+    if (activeTab === "users") {
+      fetchUsers();
+    } else if (activeTab === "requests") {
+      fetchRequests();
+    }
+  }, [activeTab, token]);
+  
+  useEffect(() => {
+    applyUserFilters();
+  }, [users, userFilters]);
+  
+  useEffect(() => {
+    applyRequestFilters();
+  }, [requests, requestFilters]);
+  
+  // Fetch all users (admin only)
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/v1/admin/users", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setUsers(response.data.data);
+      setFilteredUsers(response.data.data);
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        // If not an admin, redirect
+        navigate("/sample-request", { replace: true });
+      }
+      setError("Failed to fetch users");
+    }
+  };
+  
+  // Fetch all sample requests
+  const fetchRequests = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/requests", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setRequests(response.data.data);
+      setFilteredRequests(response.data.data);
+    } catch (err: any) {
+      setError("Failed to fetch requests");
+    }
+  };
+  
+  // Handle user filter changes
+  const handleUserFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserFilters(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Handle request filter changes
+  const handleRequestFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setRequestFilters(prev => ({ ...prev, [name]: value }));
+  };
+  
   // Apply filters to users
-  useEffect(() => {
+  const applyUserFilters = () => {
     let result = [...users];
     
     if (userFilters.userType) {
@@ -88,9 +151,7 @@ const AdminDashboard = () => {
     }
     
     if (userFilters.orgName) {
-      result = result.filter(user => 
-        user.orgName.toLowerCase().includes(userFilters.orgName.toLowerCase())
-      );
+      result = result.filter(user => user.orgName.toLowerCase().includes(userFilters.orgName.toLowerCase()));
     }
     
     if (userFilters.orgType) {
@@ -98,10 +159,10 @@ const AdminDashboard = () => {
     }
     
     setFilteredUsers(result);
-  }, [users, userFilters]);
-
+  };
+  
   // Apply filters to requests
-  useEffect(() => {
+  const applyRequestFilters = () => {
     let result = [...requests];
     
     if (requestFilters.status) {
@@ -110,7 +171,8 @@ const AdminDashboard = () => {
     
     if (requestFilters.orgName) {
       result = result.filter(request => 
-        typeof request.userId === 'object' && request.userId.orgName.toLowerCase().includes(requestFilters.orgName.toLowerCase())
+        typeof request.userId === 'object' && 
+        request.userId.orgName.toLowerCase().includes(requestFilters.orgName.toLowerCase())
       );
     }
     
@@ -121,73 +183,53 @@ const AdminDashboard = () => {
     }
     
     setFilteredRequests(result);
-  }, [requests, requestFilters]);
-
-  // Fetch all users
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/v1/admin/users", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsers(response.data.data);
-      setFilteredUsers(response.data.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to fetch users");
-      if (err?.response?.status === 403) {
-        // Not an admin, redirect
-        navigate("/sample-request", { replace: true });
-      }
-    }
   };
-
-  // Fetch all sample requests
-  const fetchRequests = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/v1/admin/sample-requests", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setRequests(response.data.data);
-      setFilteredRequests(response.data.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to fetch sample requests");
-    }
+  
+  // Handle tab change
+  const handleTabChange = (tab: "users" | "requests" | "reports") => {
+    setActiveTab(tab);
+    setError("");
+    setSuccess("");
   };
-
-  // Handle user filter changes
-  const handleUserFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUserFilters(prev => ({ ...prev, [name]: value }));
+  
+  // Open user modal for editing
+  const openUserModal = (user: User) => {
+    setSelectedUser(user);
+    setNewUserRole(user.role);
+    setShowUserModal(true);
   };
-
-  // Handle request filter changes
-  const handleRequestFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setRequestFilters(prev => ({ ...prev, [name]: value }));
+  
+  // Open request modal for status change
+  const openRequestModal = (request: SampleRequest) => {
+    setSelectedRequest(request);
+    setNewRequestStatus(request.status);
+    setShowRequestModal(true);
   };
-
-  // Delete user
+  
+  // Delete a user
   const handleDeleteUser = async (userId: string) => {
     if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       return;
     }
-
+    
     try {
       await axios.delete(`http://localhost:5000/api/v1/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       setSuccess("User deleted successfully");
       setUsers(users.filter(user => user._id !== userId));
       setSelectedUser(null);
       setShowUserModal(false);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to delete user");
+      setError("Failed to delete user");
     }
   };
-
+  
   // Update user role
   const handleUpdateUserRole = async () => {
     if (!selectedUser) return;
-
+    
     try {
       await axios.patch(
         `http://localhost:5000/api/v1/admin/users/${selectedUser._id}/role`,
@@ -197,26 +239,24 @@ const AdminDashboard = () => {
       
       setSuccess("User role updated successfully");
       
-      // Update local state
-      const updatedUsers = users.map(user => {
+      // Update the user in state
+      setUsers(users.map(user => {
         if (user._id === selectedUser._id) {
           return { ...user, role: newUserRole };
         }
         return user;
-      });
+      }));
       
-      setUsers(updatedUsers);
       setShowUserModal(false);
-      
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to update user role");
     }
   };
-
-  // Update sample request status
+  
+  // Update request status
   const handleUpdateRequestStatus = async () => {
     if (!selectedRequest) return;
-
+    
     try {
       await axios.patch(
         `http://localhost:5000/api/requests/${selectedRequest._id}/status`,
@@ -226,56 +266,49 @@ const AdminDashboard = () => {
       
       setSuccess("Request status updated successfully");
       
-      // Update local state
-      const updatedRequests = requests.map(request => {
+      // Update the request in state
+      setRequests(requests.map(request => {
         if (request._id === selectedRequest._id) {
           return { ...request, status: newRequestStatus };
         }
         return request;
-      });
+      }));
       
-      setRequests(updatedRequests);
       setShowRequestModal(false);
-      
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to update request status");
+      setError("Failed to update request status");
     }
   };
+  
+  if (!user) {
+    return <Loader fullScreen={true} />;
+  }
 
-  // Open user modal for editing
-  const openUserModal = (user: User) => {
-    setSelectedUser(user);
-    setNewUserRole(user.role);
-    setShowUserModal(true);
-  };
-
-  // Open request modal for status change
-  const openRequestModal = (request: SampleRequest) => {
-    setSelectedRequest(request);
-    setNewRequestStatus(request.status);
-    setShowRequestModal(true);
-  };
-
-  // Clear alerts when changing tabs
-  const handleTabChange = (tab: "users" | "requests") => {
-    setActiveTab(tab);
-    setError("");
-    setSuccess("");
-  };
+  function handleCreateReport(request: SampleRequest): void {
+    throw new Error("Function not implemented.");
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 px-4 py-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
-          Admin Dashboard
-        </h1>
-
-        {/* Alerts */}
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <button
+            onClick={() => logout()}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+        
         {error && (
           <div className="mb-4 p-3 bg-red-900/50 border border-red-700 text-red-200 rounded-lg text-sm">
             {error}
           </div>
         )}
+        
         {success && (
           <div className="mb-4 p-3 bg-green-900/50 border border-green-700 text-green-200 rounded-lg text-sm">
             {success}
@@ -302,11 +335,21 @@ const AdminDashboard = () => {
             }`}
             onClick={() => handleTabChange("requests")}
           >
-            Sample Requests
+            Request Management
+          </button>
+          <button
+            className={`py-2 px-6 font-medium ${
+              activeTab === "reports"
+                ? "text-purple-400 border-b-2 border-purple-400"
+                : "text-gray-400 hover:text-gray-300"
+            }`}
+            onClick={() => handleTabChange("reports")}
+          >
+            Reports
           </button>
         </div>
 
-        {/* User Management Tab */}
+        {/* Users Tab */}
         {activeTab === "users" && (
           <div>
             {/* Filters */}
@@ -530,6 +573,14 @@ const AdminDashboard = () => {
                           >
                             View
                           </button>
+                          {request.status === "Completed" && (
+                            <button
+                              onClick={() => handleCreateReport(request)}
+                              className="ml-4 text-green-400 hover:text-green-300"
+                            >
+                              {request.reportId ? "View Report" : "Create Report"}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -546,17 +597,34 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Reports Tab */}
+        {activeTab === "reports" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-white">Report Management</h2>
+              <Link
+                to="/reports/create"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg"
+              >
+                Create New Report
+              </Link>
+            </div>
+            
+            <ReportsList 
+              onSelectReport={(report) => setSelectedReport(report._id)}
+            />
+          </div>
+        )}
+
         {/* User Edit Modal */}
         {showUserModal && selectedUser && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 border border-gray-700">
               <h3 className="text-xl font-bold text-white mb-4">Edit User: {selectedUser.userName}</h3>
-              
               <div className="mb-4">
                 <p className="text-sm text-gray-400">Email: {selectedUser.email}</p>
                 <p className="text-sm text-gray-400">Organization: {selectedUser.orgName}</p>
               </div>
-              
               <div className="mb-6">
                 <label className="block text-sm text-gray-400 mb-2">Role</label>
                 <select
@@ -570,7 +638,6 @@ const AdminDashboard = () => {
                   <option value="admin">Admin</option>
                 </select>
               </div>
-              
               <div className="flex justify-between">
                 <button
                   onClick={() => setShowUserModal(false)}
@@ -604,14 +671,12 @@ const AdminDashboard = () => {
               <h3 className="text-xl font-bold text-white mb-4">
                 Update Request Status: {selectedRequest.requestId}
               </h3>
-              
               <div className="mb-4">
                 <p className="text-sm text-gray-400">Sample Type: {selectedRequest.sampleType}</p>
                 <p className="text-sm text-gray-400">
                   Organization: {typeof selectedRequest.userId === 'object' ? selectedRequest.userId.orgName : 'Unknown'}
                 </p>
               </div>
-              
               <div className="mb-6">
                 <label className="block text-sm text-gray-400 mb-2">Status</label>
                 <select
@@ -627,7 +692,6 @@ const AdminDashboard = () => {
                   <option value="Completed">Completed</option>
                 </select>
               </div>
-              
               <div className="flex justify-between">
                 <button
                   onClick={() => setShowRequestModal(false)}
@@ -644,6 +708,31 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Report Detail Modal */}
+        {selectedReport && (
+          <ReportDetail
+            reportId={selectedReport}
+            onClose={() => setSelectedReport(null)}
+            onStatusChange={() => {
+              // Refresh the data when a report status changes
+              fetchUsers();
+              fetchRequests();
+            }}
+          />
+        )}
+        
+        {/* Create Report Modal */}
+        {showCreateReportForm && (
+          <CreateReportForm
+            onReportCreated={() => {
+              // Refresh the data when a new report is created
+              fetchUsers();
+              fetchRequests();
+            }}
+            onClose={() => setShowCreateReportForm(false)}
+          />
         )}
       </div>
     </div>

@@ -11,8 +11,11 @@ import ProtectedRoute from "./components/protectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
 import AdminRoute from "./components/adminroute";
+import PiEmployeeRoute from "./components/piEmployeeRoute"; // You'll need to create this
 import Testing from "./pages/testing";
 import ResetPassword from "./pages/ResetPassword";
+import ReportDetail from "./pages/ReportDetail"; 
+import CreateReport from "./pages/CreateReport"; 
 
 function App() {
   return (
@@ -62,6 +65,25 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
+          {/* Report-related routes */}
+          <Route 
+            path="/reports/create" 
+            element={
+              <PiEmployeeRoute>
+                <CreateReport />
+              </PiEmployeeRoute>
+            } 
+          />
+          <Route 
+            path="/reports/:id" 
+            element={
+              <ProtectedRoute>
+                <ReportDetail />
+              </ProtectedRoute>
+            } 
+          />
+          
           <Route
             path="/admin"
             element={
